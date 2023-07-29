@@ -80,6 +80,14 @@ class _HomeState extends State<Home> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
+        systemOverlayStyle: SystemUiOverlayStyle(
+            systemNavigationBarColor: !isDarkMode
+                ? Colors.transparent
+                : Theme.of(context).scaffoldBackgroundColor,
+            statusBarColor:
+                !isDarkMode ? Colors.transparent : Colors.transparent,
+            statusBarIconBrightness:
+                !isDarkMode ? Brightness.dark : Brightness.light),
         title: const Text(
           "AlaSTT",
           style: TextStyle(fontWeight: FontWeight.bold),
