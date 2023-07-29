@@ -1,142 +1,10 @@
 import 'package:alastt/main.dart';
-import 'package:avatar_glow/avatar_glow.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
-import 'package:highlight_text/highlight_text.dart';
+import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:translator/translator.dart';
-
-class SpeechScreen extends StatefulWidget {
-  @override
-  _SpeechScreenState createState() => _SpeechScreenState();
-}
-
-class _SpeechScreenState extends State<SpeechScreen> {
-  final Map<String, HighlightedWord> _highlights = {
-    'flutter': HighlightedWord(
-      onTap: () => print('flutter'),
-      textStyle: const TextStyle(
-        color: Colors.blue,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-    'voice': HighlightedWord(
-      onTap: () => print('voice'),
-      textStyle: const TextStyle(
-        color: Colors.green,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-    'subscribe': HighlightedWord(
-      onTap: () => print('subscribe'),
-      textStyle: const TextStyle(
-        color: Colors.red,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-    'like': HighlightedWord(
-      onTap: () => print('like'),
-      textStyle: const TextStyle(
-        color: Colors.blueAccent,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-    'comment': HighlightedWord(
-      onTap: () => print('comment'),
-      textStyle: const TextStyle(
-        color: Colors.green,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-  };
-
-  late stt.SpeechToText _speech;
-  bool _isListening = false;
-  String _text = 'Press the button and start speaking';
-  double _confidence = 1.0;
-
-  @override
-  void initState() {
-    super.initState();
-    _speech = stt.SpeechToText();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Confidence: ${(_confidence * 100.0).toStringAsFixed(1)}%'),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: AvatarGlow(
-        animate: _isListening,
-        glowColor: Theme.of(context).primaryColor,
-        endRadius: 75.0,
-        duration: const Duration(milliseconds: 2000),
-        repeatPauseDuration: const Duration(milliseconds: 100),
-        repeat: true,
-        child: FloatingActionButton(
-          onPressed: _listen,
-          child: Icon(_isListening ? Icons.mic : Icons.mic_none),
-        ),
-      ),
-      body: SingleChildScrollView(
-        reverse: true,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(30.0, 30.0, 30.0, 150.0),
-          child: TextHighlight(
-            text: _text,
-            words: _highlights,
-            textStyle: const TextStyle(
-              fontSize: 32.0,
-              color: Colors.black,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _listen() async {
-    /* _speech.locales().then((value) => value.forEach((element) {
-          print(element.name);
-        }));
-    _speech.systemLocale().then((value) => print(value?.name));
-  */
-
-    if (!_isListening) {
-      bool available = await _speech.initialize(
-        onStatus: (val) => print('onStatus: $val'),
-        onError: (val) => print('onError: $val'),
-      );
-      var locales = await _speech.locales();
-      locales.forEach((element) {
-        print(element.name);
-      });
-      print((await _speech.systemLocale())?.name);
-      var selectedLocale = locales[0];
-      if (available) {
-        setState(() => _isListening = true);
-        _speech.listen(
-          // localeId: selectedLocale.localeId,
-          onResult: (val) => setState(() {
-            _text = val.recognizedWords;
-            if (val.hasConfidenceRating && val.confidence > 0) {
-              _confidence = val.confidence;
-            }
-          }),
-        );
-      }
-    } else {
-      setState(() => _isListening = false);
-      _speech.stop();
-    }
-  }
-}
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -148,8 +16,7 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   final SpeechToText _speechToText = SpeechToText();
   final translator = GoogleTranslator();
-  String _lastWords = "";
-  String _tranlated = "";
+  String _translated = "";
   late bool _isNotListening;
   TranslationLanguage _translateTo = TranslationLanguage.igbo;
   final TextEditingController ttsController = TextEditingController();
@@ -157,9 +24,10 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
-    _speechToText.initialize(
-        onError: (errorNotification) => print("Err: $errorNotification"),
-        options: [SpeechToText.androidIntentLookup]);
+    _speechToText.initialize(options: [SpeechToText.androidIntentLookup]);
+
+    /// Sets the value of _isNotListening which is used for mic
+    /// status (stroke out or not)
     _speechToText.statusListener = (String val) {
       switch (val) {
         case "listening":
@@ -191,18 +59,18 @@ class _HomeState extends State<Home> {
   /// the platform returns recognized words.
   void _onSpeechResult(SpeechRecognitionResult result) {
     setState(() {
-      _lastWords = result.recognizedWords;
       ttsController.text = result.recognizedWords;
     });
 
     _updateTranslated();
   }
 
+  /// Converts input text to selected language (default = Igbo)
   void _updateTranslated() async {
-    if (_lastWords.isNotEmpty) {
+    if (ttsController.value.text.isNotEmpty) {
       translator
-          .translate(_lastWords, to: _translateTo.shortCode)
-          .then((value) => setState(() => _tranlated = value.text));
+          .translate(ttsController.value.text, to: _translateTo.shortCode)
+          .then((value) => setState(() => _translated = value.text));
     }
   }
 
@@ -250,7 +118,7 @@ class _HomeState extends State<Home> {
                     borderRadius: BorderRadius.circular(30),
                     color: isDarkMode
                         ? Colors.grey
-                        : Color.fromRGBO(254, 249, 239, 1)),
+                        : const Color.fromRGBO(254, 249, 239, 1)),
                 child: Center(
                   child: Text(
                     "English",
@@ -278,36 +146,27 @@ class _HomeState extends State<Home> {
                     borderRadius: BorderRadius.circular(20),
                     color: isDarkMode
                         ? Colors.grey
-                        : Color.fromRGBO(254, 249, 239, 1)),
+                        : const Color.fromRGBO(254, 249, 239, 1)),
                 child: TextField(
                   controller: ttsController,
+                  style: TextStyle(
+                      fontSize: 20.0,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : null),
                   maxLines: 5,
-                  //keyboardType: TextInputType.text,
                   textInputAction: TextInputAction.search,
-                  onTapOutside: (event) {
-                    print("Clicked at $event");
-                    print(FocusScope.of(context).focusedChild);
+                  onTapOutside: (_) {
                     if (FocusScope.of(context).focusedChild != null) {
                       _updateTranslated();
-                      print(_lastWords);
                     }
-                    //FocusScope.of(context).unfocus();
                     FocusManager.instance.primaryFocus?.unfocus();
                   },
+                  onSubmitted: (_) => _updateTranslated(),
                   decoration: const InputDecoration(
                       contentPadding: EdgeInsets.only(
                           top: 10, left: 10, right: 10, bottom: 5),
                       border: InputBorder.none),
                 ),
-                /*SingleChildScrollView(
-                  child: Text(
-                    _lastWords,
-                    style: TextStyle(
-                        fontSize: 20.0,
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : null),
-                  ),
-                ),*/
               ),
             ),
             const SizedBox(
@@ -321,11 +180,11 @@ class _HomeState extends State<Home> {
                     borderRadius: BorderRadius.circular(20),
                     color: isDarkMode
                         ? Colors.grey
-                        : Color.fromRGBO(254, 249, 239, 1)),
+                        : const Color.fromRGBO(254, 249, 239, 1)),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(
+                    const SizedBox(
                       width: 5,
                     ),
                     Text(
@@ -345,7 +204,7 @@ class _HomeState extends State<Home> {
                       onChanged: (TranslationLanguage? value) {
                         setState(() {
                           _translateTo = value ?? TranslationLanguage.igbo;
-                          _tranlated = "";
+                          _translated = "";
                         });
                       },
                       buttonStyleData: const ButtonStyleData(
@@ -364,7 +223,7 @@ class _HomeState extends State<Home> {
                             borderRadius: BorderRadius.circular(10),
                             color: isDarkMode
                                 ? Colors.grey
-                                : Color.fromRGBO(254, 249, 239, 1)),
+                                : const Color.fromRGBO(254, 249, 239, 1)),
                       ),
                     )),
                   ],
@@ -387,10 +246,10 @@ class _HomeState extends State<Home> {
                     borderRadius: BorderRadius.circular(10),
                     color: isDarkMode
                         ? Colors.grey
-                        : Color.fromRGBO(254, 249, 239, 1)),
+                        : const Color.fromRGBO(254, 249, 239, 1)),
                 child: SingleChildScrollView(
                   child: Text(
-                    _tranlated,
+                    _translated,
                     style: TextStyle(
                         fontSize: 20.0,
                         fontWeight: FontWeight.bold,

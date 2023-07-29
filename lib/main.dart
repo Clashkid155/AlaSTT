@@ -38,12 +38,11 @@ class MyApp extends StatelessWidget {
                   seedColor: Colors.deepPurple,
                   brightness: isDark ? Brightness.dark : Brightness.light),
               fontFamily: "Gilroy",
-              //brightness: Brightness.dark,
               useMaterial3: true,
             ),
             themeMode: ThemeMode.dark,
             home:
-                Home(), //SpeechScreen(), //MyHomePage(title: 'Flutter Demo Home Page'),
+                const Home(), //SpeechScreen(), //MyHomePage(title: 'Flutter Demo Home Page'),
           );
         });
   }
